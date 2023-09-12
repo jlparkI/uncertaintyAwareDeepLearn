@@ -1,7 +1,5 @@
 """Implements vanilla random features using matrix multiplication. This is
-sufficient if 1) the size of the latent representation is not large and
-2) the number of random features desired is not large. Otherwise,
-prefer fht_rffs.py."""
+sufficient if the size of the latent representation is not large."""
 import math
 
 import torch
@@ -9,20 +7,37 @@ from torch import Tensor
 from torch.nn.parameter import Parameter
 from torch.nn import Module
 
-class VanillaRFFRegression(Module):
-    """
 
-    This module supports :ref:`TensorFloat32<tf32_on_ampere>`.
+_ACCEPTED_LIKELIHOODS = ("gaussian", "binary_logistic", "multiclass")
+
+
+class VanillaRFF(Module):
+    """
+    A PyTorch layer for random features-based regression, binary classification and
+    multiclass classification.
 
     Args:
         in_features: size of each input sample
         RFFs: The number of RFFs generated. Must be an even number. The larger out_features,
             the more accurate the approximation of the kernel, but also the greater
-            the computational expense.
+            the computational expense. We suggest 1024 as a reasonable value.
         out_targets: The number of output targets to predict. Generally this will
             be 1 if there is only one quantity you need the model to predict, but
             it can be > 1 if the model must predict multiple quantities. Defaults
             to 1 if not otherwise specified.
+        gp_cov_momentum (float): A "discount factor" used to update a moving average
+            for the updates to the covariance matrix. 0.999 is a reasonable default
+            if the number of steps per epoch is large, otherwise you may want to
+            experiment with smaller values. If you set this to < 0 (e.g. to -1),
+            the precision matrix will be generated in a single epoch without
+            any momentum.
+        gp_ridge_penalty (float): The initial diagonal value for computing the
+            covariance matrix; useful for numerical stability so should not be
+            set to zero. 1e-3 is a reasonable default although in some cases
+            experimenting with different settings may improve performance.
+        likelihood (str): One of "gaussian", "binary_logistic", "multiclass".
+            Determines how the precision matrix is calculated. Use "gaussian"
+            for regression.
         random_seed: The random seed for generating the random features weight
             matrix. IMPORTANT -- always set this for reproducibility. Defaults to
             123.
@@ -34,10 +49,16 @@ class VanillaRFFRegression(Module):
           are the same shape as the input and :math:`H_{out} = \text{out_targets}`.
 
     Attributes:
-        weight_mat: the non-learnable weights for generating random fourier features,
+        training (bool): If True, the model is in training mode, and will accumulate
+            variance information on each call to forward. Otherwise no variance
+            information is accumulated.
+        weight_mat (Tensor): the non-learnable weights for generating random fourier features,
             of shape :math:`(H_{in}, 0.5 * RFFs)`
-        output_weights: the learnable weights for generating the output predictions,
+        output_weights (Tensor): the learnable weights for generating the output predictions,
             of shape :math:`(RFFs, out_targets)`.
+        covariance (Tensor): The approximate covariance matrix.
+        precision (Tensor): The approximate precision matrix.
+        init_precision (Tensor): The initial precision matrix.
 
     Examples::
 
@@ -50,15 +71,23 @@ class VanillaRFFRegression(Module):
     __constants__ = ['in_features', 'out_features']
     in_features: int
     out_targets: int
+    training: bool
+    momentum: float
+    ridge_penalty: float
     RFFs: int
     random_seed: int
     num_freqs: int
     feature_scale: float
     weight_mat: Tensor
     output_weights: Tensor
+    covariance: Tensor
+    precision: Tensor
+    init_precision: Tensor
 
     def __init__(self, in_features: int, RFFs: int, out_targets: int=1,
-            random_seed: int=123, device=None, dtype=None) -> None:
+            gp_cov_momentum = 0.999, gp_ridge_penalty = 1e-3,
+            likelihood = "gaussian", random_seed: int=123,
+            device=None, dtype=None) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
         if not isinstance(out_targets, int) or not isinstance(RFFs, int) or \
@@ -66,39 +95,119 @@ class VanillaRFFRegression(Module):
             raise ValueError("out_targets, RFFs and in_features must be integers.")
         if out_targets < 1 or RFFs < 1 or in_features < 1:
             raise ValueError("out_targets, RFFs and in_features must be > 0.")
-        if RFFs == 1 or RFFs % 2 != 0:
-            raise ValueError("RFFs must be an even number.")
+        if RFFs <= 1 or RFFs % 2 != 0:
+            raise ValueError("RFFs must be an even number greater than 1.")
+        if likelihood not in _ACCEPTED_LIKELIHOODS:
+            raise ValueError(f"Likelihood must be one of {_ACCEPTED_LIKELIHOODS}.")
 
         self.in_features = in_features
         self.out_targets = out_targets
+        self.fitted = False
+        self.momentum = gp_cov_momentum
+        self.ridge_penalty = gp_ridge_penalty
         self.RFFs = RFFs
+        self.likelihood = likelihood
         self.random_seed = random_seed
         self.num_freqs = int(0.5 * RFFs)
         self.feature_scale = math.sqrt(2. / float(self.num_freqs))
 
         self.register_buffer("weight_mat", torch.empty((in_features, self.num_freqs), **factory_kwargs))
         self.output_weights = Parameter(torch.empty((RFFs, out_targets), **factory_kwargs))
+        self.covariance = Parameter(1 / self.ridge_penalty * torch.eye(RFFs),
+                requires_grad=False)
+        self.precision_initial = self.ridge_penalty * torch.eye(RFFs, requires_grad=False)
+        self.precision = Parameter(self.precision_initial, requires_grad=False)
         self.reset_parameters()
 
 
+    def train(self, mode=True) -> None:
+        """Sets the layer to train or eval mode when called
+        by the parent model. NOTE: Setting the model to
+        eval if it was previously in train will cause
+        the covariance matrix to be calculated. This can
+        (if the number of RFFs is large) be an expensive calculation,
+        so expect model.eval() to take a moment in such cases."""
+        if mode:
+            self.fitted = False
+        else:
+            if not self.fitted:
+                self.covariance[...] = (self.ridge_penalty *
+                        self.precision.cholesky_inverse())
+            self.fitted = True
+
+
     def reset_parameters(self) -> None:
-        """Set parameters to initial values."""
+        """Set parameters to initial values. We don't need to use kaiming
+        normal -- in fact, that would set the variance on our sqexp kernel
+        to something other than 1 (which is ok, but might be unexpected for
+        the user)."""
         with torch.no_grad():
             rgen = torch.Generator()
             rgen.manual_seed(self.random_seed)
-            self.weight_mat = torch.randn(rgen, self.weight_mat.size())
-            self.output_weights[:] = 0.0
+            self.weight_mat = torch.randn(generator = rgen,
+                    size = self.weight_mat.size())
+            self.output_weights[:] = torch.nn.randn(generator = rgen,
+                    size = self.output_weights.size())
+            self.precision[...] = self.precision_initial.detach()
 
 
-    def forward(self, input_tensor: Tensor) -> Tensor:
-        """Forward pass. TODO: Should we add uncertainty calculation here,
-        or in separate function?"""
+
+    def forward(self, input_tensor: Tensor, update_precision: bool = False,
+            get_var: bool = False) -> Tensor:
+        """Forward pass. Only updates the precision matrix if update_precision is
+        set to True.
+
+        Args:
+            input_tensor (Tensor): The input x values. Must be a 2d tensor.
+            update_precision (bool): If True, update the precision matrix. Only
+                do this during training.
+            get_var (bool): If True, obtain the variance on the predictions. Only
+                do this when generating model predictions (not necessary during
+                training).
+
+        Returns:
+            logits (Tensor): The output predictions, of size (input_tensor.shape[0],
+                    out_targets)
+            var (Tensor): Only returned if get_var is True. Indicates variance on
+                predictions."""
         rff_mat = torch.zeros((input_tensor.shape[0], self.RFFs))
-        intermediary = input_tensor @ self.weight_mat
-        rff_mat[:,:self.num_freqs] = torch.sin(intermediary)
-        rff_mat[:,self.num_freqs:] = torch.cos(intermediary)
-        del intermediary
-        return rff_mat @ self.output_weights
+        rff_mat[:,:self.num_freqs] = input_tensor @ self.weight_mat
+        rff_mat[:,self.num_freqs:] = torch.cos(rff_mat[:,:self.num_freqs])
+        rff_mat[:,:self.num_freqs] = torch.sin(rff_mat[:,:self.num_freqs])
+        rff_mat *= self.feature_scale
+        logits = rff_mat @ self.output_weights
+        if update_precision:
+            self._update_precision(rff_mat, logits)
+        if get_var:
+            var = rff_mat @ (self.covariance @ rff_mat.T)
+            return logits, var
+        return logits
 
-    def extra_repr(self) -> str:
-        return f'in_features={self.in_features}, out_targets={self.out_targets}, RFFs={self.RFFs}, random_seed={self.random_seed}'
+
+    def _update_precision(self, rff_mat: Tensor, logits: Tensor) -> Tensor:
+        """Updates the precision matrix. If momentum is < 0, the precision
+        matrix is updated using a sum over all minibatches in the epoch;
+        this calculation therefore needs to be run only once, on the
+        last epoch. If momentum is > 0, the precision matrix is updated
+        using the momentum term selected by the user. Note that for multi-class
+        classification, we actually compute an upper bound; see Liu et al. 2022.;
+        since computing the full Hessian would be too expensive if there is
+        a large number of classes."""
+        with torch.no_grad():
+            if self.likelihood == 'binary_logistic':
+                prob = torch.sigmoid(logits)
+                prob_multiplier = prob * (1. - prob)
+            elif self.likelihood == 'multiclass':
+                prob = torch.max(torch.softmax(logits), dim=1)
+                prob_multiplier = prob * (1. - prob)
+            else:
+                prob_multiplier = 1.
+
+            gp_feature_adjusted = torch.sqrt(prob_multiplier) * rff_mat
+            precision_matrix_minibatch = gp_feature_adjusted.T @ gp_feature_adjusted
+            if self.momentum < 0:
+                self.precision += precision_matrix_minibatch
+            else:
+                self.precision[...] = (
+                    self.momentum * self.precision
+                    + (1 - self.momentum) * precision_matrix_minibatch)
