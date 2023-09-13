@@ -11,20 +11,20 @@ from torch.nn import Module
 _ACCEPTED_LIKELIHOODS = ("gaussian", "binary_logistic", "multiclass")
 
 
-class VanillaRFF(Module):
+class VanillaRFFLayer(Module):
     """
     A PyTorch layer for random features-based regression, binary classification and
     multiclass classification.
 
     Args:
-        in_features: size of each input sample
-        RFFs: The number of RFFs generated. Must be an even number. The larger out_features,
+        in_features: The dimensionality of each input datapoint. Each input
+            tensor should be a 2d tensor of size (N, in_features).
+        RFFs: The number of RFFs generated. Must be an even number. The larger RFFs,
             the more accurate the approximation of the kernel, but also the greater
             the computational expense. We suggest 1024 as a reasonable value.
-        out_targets: The number of output targets to predict. Generally this will
-            be 1 if there is only one quantity you need the model to predict, but
-            it can be > 1 if the model must predict multiple quantities. Defaults
-            to 1 if not otherwise specified.
+        out_targets: The number of output targets to predict. For regression and
+            binary classification, this must be 1. For multiclass classification,
+            this should be the number of possible categories in the data.
         gp_cov_momentum (float): A "discount factor" used to update a moving average
             for the updates to the covariance matrix. 0.999 is a reasonable default
             if the number of steps per epoch is large, otherwise you may want to
@@ -46,43 +46,16 @@ class VanillaRFF(Module):
         - Input: :math:`(N, H_{in})` where :math:`N` means number of datapoints.
           Only 2d input arrays are accepted.
         - Output: :math:`(N, H_{out})` where all but the last dimension
-          are the same shape as the input and :math:`H_{out} = \text{out_targets}`.
-
-    Attributes:
-        training (bool): If True, the model is in training mode, and will accumulate
-            variance information on each call to forward. Otherwise no variance
-            information is accumulated.
-        weight_mat (Tensor): the non-learnable weights for generating random fourier features,
-            of shape :math:`(H_{in}, 0.5 * RFFs)`
-        output_weights (Tensor): the learnable weights for generating the output predictions,
-            of shape :math:`(RFFs, out_targets)`.
-        covariance (Tensor): The approximate covariance matrix.
-        precision (Tensor): The approximate precision matrix.
-        init_precision (Tensor): The initial precision matrix.
+          are the same shape as the input and :math:`H_{out}` = out_targets.
 
     Examples::
 
-        >>> m = nn.VanillaRFFRegression(20)
+        >>> m = nn.VanillaRFFLayer(20, 1)
         >>> input = torch.randn(128, 20)
         >>> output = m(input)
         >>> print(output.size())
         torch.Size([128, 1])
     """
-    __constants__ = ['in_features', 'out_features']
-    in_features: int
-    out_targets: int
-    training: bool
-    momentum: float
-    ridge_penalty: float
-    RFFs: int
-    random_seed: int
-    num_freqs: int
-    feature_scale: float
-    weight_mat: Tensor
-    output_weights: Tensor
-    covariance: Tensor
-    precision: Tensor
-    init_precision: Tensor
 
     def __init__(self, in_features: int, RFFs: int, out_targets: int=1,
             gp_cov_momentum = 0.999, gp_ridge_penalty = 1e-3,
@@ -90,6 +63,7 @@ class VanillaRFF(Module):
             device=None, dtype=None) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
+
         if not isinstance(out_targets, int) or not isinstance(RFFs, int) or \
                 not isinstance(in_features, int):
             raise ValueError("out_targets, RFFs and in_features must be integers.")
@@ -99,6 +73,12 @@ class VanillaRFF(Module):
             raise ValueError("RFFs must be an even number greater than 1.")
         if likelihood not in _ACCEPTED_LIKELIHOODS:
             raise ValueError(f"Likelihood must be one of {_ACCEPTED_LIKELIHOODS}.")
+        if likelihood in ["gaussian", "binary_logistic"] and out_targets != 1:
+            raise ValueError("For regression and binary_logistic likelihoods, "
+                    "only one out target is expected.")
+        elif out_targets <= 1:
+            raise ValueError("For multiclass likelihood, more than one out target "
+                    "is expected.")
 
         self.in_features = in_features
         self.out_targets = out_targets
@@ -169,16 +149,29 @@ class VanillaRFF(Module):
             logits (Tensor): The output predictions, of size (input_tensor.shape[0],
                     out_targets)
             var (Tensor): Only returned if get_var is True. Indicates variance on
-                predictions."""
+                predictions.
+
+        Raises:
+            RuntimeError: A RuntimeError is raised if get_var is set to True
+                but model.eval() has never been called."""
+        if len(input_tensor.size()) != 2:
+            raise ValueError("Only 2d input tensors are accepted by "
+                    "VanillaRFFLayer.")
         rff_mat = torch.zeros((input_tensor.shape[0], self.RFFs))
         rff_mat[:,:self.num_freqs] = input_tensor @ self.weight_mat
         rff_mat[:,self.num_freqs:] = torch.cos(rff_mat[:,:self.num_freqs])
         rff_mat[:,:self.num_freqs] = torch.sin(rff_mat[:,:self.num_freqs])
         rff_mat *= self.feature_scale
         logits = rff_mat @ self.output_weights
+
         if update_precision:
             self._update_precision(rff_mat, logits)
+
         if get_var:
+            if not self.fitted:
+                raise RuntimeError("Must call model.eval() to generate "
+                        "the covariance matrix before requesting a "
+                        "variance calculation.")
             var = rff_mat @ (self.covariance @ rff_mat.T)
             return logits, var
         return logits
