@@ -76,7 +76,7 @@ class VanillaRFFLayer(Module):
         if likelihood in ["gaussian", "binary_logistic"] and out_targets != 1:
             raise ValueError("For regression and binary_logistic likelihoods, "
                     "only one out target is expected.")
-        elif out_targets <= 1:
+        if likelihood == "multiclass" and out_targets <= 1:
             raise ValueError("For multiclass likelihood, more than one out target "
                     "is expected.")
 
@@ -126,7 +126,7 @@ class VanillaRFFLayer(Module):
             rgen.manual_seed(self.random_seed)
             self.weight_mat = torch.randn(generator = rgen,
                     size = self.weight_mat.size())
-            self.output_weights[:] = torch.nn.randn(generator = rgen,
+            self.output_weights[:] = torch.randn(generator = rgen,
                     size = self.output_weights.size())
             self.precision[...] = self.precision_initial.detach()
 
