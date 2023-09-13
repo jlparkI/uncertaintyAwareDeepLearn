@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Using uncertaintyAwareDeepLearn &mdash; uncertaintyAwareDeepLearn 0.0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Installation" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            uncertaintyAwareDeepLearn
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#"> Using uncertaintyAwareDeepLearn</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#uncertaintyAwareDeepLearn.VanillaRFFLayer"><code class="docutils literal notranslate"><span class="pre">VanillaRFFLayer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#uncertaintyAwareDeepLearn.VanillaRFFLayer.__init__"><code class="docutils literal notranslate"><span class="pre">VanillaRFFLayer.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#uncertaintyAwareDeepLearn.VanillaRFFLayer.forward"><code class="docutils literal notranslate"><span class="pre">VanillaRFFLayer.forward()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">uncertaintyAwareDeepLearn</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Using uncertaintyAwareDeepLearn</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/usage.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="using-uncertaintyawaredeeplearn">
+<h1>Using uncertaintyAwareDeepLearn<a class="headerlink" href="#using-uncertaintyawaredeeplearn" title="Link to this heading"></a></h1>
+<p>Currently the key tool you’ll want to import from this package is VanillaRFFLayer,
+which is a random-features approximated last layer for a neural net. You can
+add it to a PyTorch model you are constructing as shown below::</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">uncertaintyAwareDeepLearn</span> <span class="kn">import</span> <span class="n">VanillaRFFLayer</span>
+
+
+<span class="k">class</span> <span class="nc">MyNiftyNeuralNetwork</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">my_last_layer</span> <span class="o">=</span> <span class="n">VanillaRFFLayer</span><span class="p">(</span><span class="n">in_features</span> <span class="o">=</span> <span class="mi">212</span><span class="p">,</span> <span class="n">RFFs</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">,</span>
+                        <span class="n">out_targets</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">gp_cov_momentum</span> <span class="o">=</span> <span class="mf">0.999</span><span class="p">,</span>
+                        <span class="n">gp_ridge_penalty</span> <span class="o">=</span> <span class="mf">1e-3</span><span class="p">,</span> <span class="n">likelihood</span> <span class="o">=</span> <span class="s2">&quot;gaussian&quot;</span><span class="p">,</span>
+                        <span class="n">random_seed</span> <span class="o">=</span> <span class="mi">123</span><span class="p">)</span>
+        <span class="c1"># Insert other layers here</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">update_precision</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">get_var</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="c1"># Convert x to latent representation here. Note that update_precision</span>
+        <span class="c1"># should be set to True when training and False when evaluating.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">get_var</span><span class="p">:</span>
+            <span class="n">preds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">my_last_layer</span><span class="p">(</span><span class="n">latent_rep</span><span class="p">,</span> <span class="n">update_precision</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">preds</span>
+
+        <span class="c1"># Note that if get_var is True, VanillaRFFLayers will also return</span>
+        <span class="c1"># estimated variance.</span>
+        <span class="n">preds</span><span class="p">,</span> <span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">my_last_layer</span><span class="p">(</span><span class="n">latent_rep</span><span class="p">,</span> <span class="n">update_precision</span><span class="p">,</span>
+                            <span class="n">get_var</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">preds</span><span class="p">,</span> <span class="n">var</span>
+</pre></div>
+</div>
+<p>To understand the parameters accepted by the class constructor, see
+below:</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="uncertaintyAwareDeepLearn.VanillaRFFLayer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">uncertaintyAwareDeepLearn.</span></span><span class="sig-name descname"><span class="pre">VanillaRFFLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">RFFs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_targets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gp_cov_momentum</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.999</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gp_ridge_penalty</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gaussian'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">123</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#uncertaintyAwareDeepLearn.VanillaRFFLayer" title="Link to this definition"></a></dt>
+<dd><p>A PyTorch layer for random features-based regression, binary classification and
+multiclass classification.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>in_features</strong> – The dimensionality of each input datapoint. Each input
+tensor should be a 2d tensor of size (N, in_features).</p></li>
+<li><p><strong>RFFs</strong> – The number of RFFs generated. Must be an even number. The larger RFFs,
+the more accurate the approximation of the kernel, but also the greater
+the computational expense. We suggest 1024 as a reasonable value.</p></li>
+<li><p><strong>out_targets</strong> – The number of output targets to predict. For regression and
+binary classification, this must be 1. For multiclass classification,
+this should be the number of possible categories in the data.</p></li>
+<li><p><strong>gp_cov_momentum</strong> (<em>float</em>) – A “discount factor” used to update a moving average
+for the updates to the covariance matrix. 0.999 is a reasonable default
+if the number of steps per epoch is large, otherwise you may want to
+experiment with smaller values. If you set this to &lt; 0 (e.g. to -1),
+the precision matrix will be generated in a single epoch without
+any momentum.</p></li>
+<li><p><strong>gp_ridge_penalty</strong> (<em>float</em>) – The initial diagonal value for computing the
+covariance matrix; useful for numerical stability so should not be
+set to zero. 1e-3 is a reasonable default although in some cases
+experimenting with different settings may improve performance.</p></li>
+<li><p><strong>likelihood</strong> (<em>str</em>) – One of “gaussian”, “binary_logistic”, “multiclass”.
+Determines how the precision matrix is calculated. Use “gaussian”
+for regression.</p></li>
+<li><p><strong>random_seed</strong> – The random seed for generating the random features weight
+matrix. IMPORTANT – always set this for reproducibility. Defaults to
+123.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="simple">
+<dt>Shape:</dt><dd><ul class="simple">
+<li><p>Input: <span class="math notranslate nohighlight">\((N, H_{in})\)</span> where <span class="math notranslate nohighlight">\(N\)</span> means number of datapoints.
+Only 2d input arrays are accepted.</p></li>
+<li><p>Output: <span class="math notranslate nohighlight">\((N, H_{out})\)</span> where all but the last dimension
+are the same shape as the input and <span class="math notranslate nohighlight">\(H_{out}\)</span> = out_targets.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Examples:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">m</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">VanillaRFFLayer</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">output</span> <span class="o">=</span> <span class="n">m</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+<span class="go">torch.Size([128, 1])</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="uncertaintyAwareDeepLearn.VanillaRFFLayer.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">RFFs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_targets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gp_cov_momentum</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.999</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gp_ridge_penalty</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gaussian'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">123</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#uncertaintyAwareDeepLearn.VanillaRFFLayer.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initializes internal Module state, shared by both nn.Module and ScriptModule.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="uncertaintyAwareDeepLearn.VanillaRFFLayer.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_tensor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">update_precision</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">get_var</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#uncertaintyAwareDeepLearn.VanillaRFFLayer.forward" title="Link to this definition"></a></dt>
+<dd><p>Forward pass. Only updates the precision matrix if update_precision is
+set to True.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_tensor</strong> (<em>Tensor</em>) – The input x values. Must be a 2d tensor.</p></li>
+<li><p><strong>update_precision</strong> (<em>bool</em>) – If True, update the precision matrix. Only
+do this during training.</p></li>
+<li><p><strong>get_var</strong> (<em>bool</em>) – If True, obtain the variance on the predictions. Only
+do this when generating model predictions (not necessary during
+training).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>logits</strong> (<em>Tensor</em>) – The output predictions, of size (input_tensor.shape[0],
+out_targets)</p></li>
+<li><p><strong>var</strong> (<em>Tensor</em>) – Only returned if get_var is True. Indicates variance on
+predictions.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>RuntimeError</strong> – A RuntimeError is raised if get_var is set to True
+    but model.eval() has never been called.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<p>Notice that there are two ways to generate the precision matrix. It can
+either be generated during the course of training, by setting a momentum
+value between 0 and 1; or, by setting momentum to a value less than 0
+(e.g. -1), it will be generated over the course of a single epoch. If
+you are going to use the first strategy, you should pass
+<code class="docutils literal notranslate"><span class="pre">update_precision=True</span></code> to the <code class="docutils literal notranslate"><span class="pre">forward</span></code> function of VanillaRFFLayer
+on every epoch. Otherwise, you should leave <code class="docutils literal notranslate"><span class="pre">update_precision=False</span></code>
+(the default) during every training epoch right up until the last
+epoch, then set <code class="docutils literal notranslate"><span class="pre">update_precision=True</span></code> during that last epoch.
+The first strategy gives a slightly less accurate estimate of
+uncertainty but is easier to implement; the latter is slightly more
+accurate and is cheaper during training (except during the last
+epoch).</p>
+<p>As soon as you call <code class="docutils literal notranslate"><span class="pre">model.eval()</span></code> on your model, the model will use
+the precision matrix (however generated) to build a covariance matrix.
+The covariance matrix is then used to estimate uncertainty any time
+you call <code class="docutils literal notranslate"><span class="pre">forward</span></code> with <code class="docutils literal notranslate"><span class="pre">get_var</span></code> set to True. If you try to
+call <code class="docutils literal notranslate"><span class="pre">forward</span></code> with <code class="docutils literal notranslate"><span class="pre">get_var</span></code> set to True without ever calling
+<code class="docutils literal notranslate"><span class="pre">model.eval()</span></code>, a RuntimeError will be generated. If you call
+<code class="docutils literal notranslate"><span class="pre">model.eval()</span></code> but you never set <code class="docutils literal notranslate"><span class="pre">update_precision=True</span></code> at any
+time during training, a covariance matrix will still be generated,
+but the uncertainty estimates it supplies will not be accurate,
+so make sure you set <code class="docutils literal notranslate"><span class="pre">update_precision=True</span></code> at some point during
+training as described above.</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, University of California San Diego.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

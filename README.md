@@ -12,4 +12,4 @@ are appropriately associated with high uncertainty. We may add standard
 spectral-normalized layers to a future release to make this easier to implement.
 
 For details on installation and usage, see
-[the docs](https://github.com/jlparkI/uncertaintyAwareDeepLearn/docs/build/html/index.html)
+[the docs](https://github.com/jlparkI/uncertaintyAwareDeepLearn/docs/index.html)
