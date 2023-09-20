@@ -157,7 +157,6 @@ class VanillaRFFLayer(Module):
         if len(input_tensor.size()) != 2:
             raise ValueError("Only 2d input tensors are accepted by "
                     "VanillaRFFLayer.")
-        rff_mat = torch.zeros((input_tensor.shape[0], self.RFFs), device=self.weight_mat.device)
         rff_mat = input_tensor @ self.weight_mat
         rff_mat = self.feature_scale * torch.cat([torch.cos(rff_mat), torch.sin(rff_mat)], dim=1)
         logits = rff_mat @ self.output_weights
