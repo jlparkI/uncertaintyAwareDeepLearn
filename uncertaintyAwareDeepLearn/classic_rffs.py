@@ -157,11 +157,9 @@ class VanillaRFFLayer(Module):
         if len(input_tensor.size()) != 2:
             raise ValueError("Only 2d input tensors are accepted by "
                     "VanillaRFFLayer.")
-        rff_mat = torch.zeros((input_tensor.shape[0], self.RFFs))
-        rff_mat[:,:self.num_freqs] = input_tensor @ self.weight_mat
-        rff_mat[:,self.num_freqs:] = torch.cos(rff_mat[:,:self.num_freqs])
-        rff_mat[:,:self.num_freqs] = torch.sin(rff_mat[:,:self.num_freqs])
-        rff_mat *= self.feature_scale
+        rff_mat = torch.zeros((input_tensor.shape[0], self.RFFs), device=self.weight_mat.device)
+        rff_mat = input_tensor @ self.weight_mat
+        rff_mat = self.feature_scale * torch.cat([torch.cos(rff_mat), torch.sin(rff_mat)], dim=1)
         logits = rff_mat @ self.output_weights
 
         if update_precision:
@@ -172,7 +170,8 @@ class VanillaRFFLayer(Module):
                 raise RuntimeError("Must call model.eval() to generate "
                         "the covariance matrix before requesting a "
                         "variance calculation.")
-            var = rff_mat @ (self.covariance @ rff_mat.T)
+            with torch.no_grad():
+                var = rff_mat @ (self.covariance @ rff_mat.T)
             return logits, var
         return logits
 
