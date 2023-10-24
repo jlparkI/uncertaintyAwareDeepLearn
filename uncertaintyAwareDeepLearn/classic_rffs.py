@@ -112,7 +112,8 @@ class VanillaRFFLayer(Module):
         else:
             if not self.fitted:
                 self.covariance[...] = torch.linalg.pinv(self.ridge_penalty *
-                        torch.eye(self.precision.size()[0]) + self.precision)
+                    torch.eye(self.precision.size()[0], device = self.precision.device) +
+                    self.precision)
             self.fitted = True
 
 
