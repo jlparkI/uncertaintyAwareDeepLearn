@@ -45,7 +45,7 @@ class TestVanillaRFFLayer(unittest.TestCase):
 
 
     def test_covariance_calc(self):
-        """Checks that the covariance matrix is appropriately calculated
+        """Checks that the covariance matrix is calculated
         when eval is called."""
         my_layer = VanillaRFFLayer(in_features = 212, RFFs = 256,
                     out_targets = 1, gp_cov_momentum = -1, gp_ridge_penalty = 1e-3,
@@ -57,7 +57,7 @@ class TestVanillaRFFLayer(unittest.TestCase):
 
         my_layer.eval()
         self.assertTrue(my_layer.fitted)
-        self.assertTrue(torch.allclose(my_layer.covariance[0,0], torch.Tensor([999.999])))
+        self.assertTrue(torch.allclose(my_layer.covariance[0,0], torch.Tensor([999.9999])))
         try:
             input_tx = torch.zeros((10,212))
             preds, var = my_layer(input_tx, get_var = True)

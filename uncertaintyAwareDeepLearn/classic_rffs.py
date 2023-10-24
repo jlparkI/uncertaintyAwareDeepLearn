@@ -93,9 +93,9 @@ class VanillaRFFLayer(Module):
 
         self.register_buffer("weight_mat", torch.empty((in_features, self.num_freqs), **factory_kwargs))
         self.output_weights = Parameter(torch.empty((RFFs, out_targets), **factory_kwargs))
-        self.covariance = Parameter(1 / self.ridge_penalty * torch.eye(RFFs),
+        self.covariance = Parameter((1 / self.ridge_penalty) * torch.eye(RFFs),
                 requires_grad=False)
-        self.precision_initial = self.ridge_penalty * torch.eye(RFFs, requires_grad=False)
+        self.precision_initial = torch.zeros((RFFs, RFFs), requires_grad=False)
         self.precision = Parameter(self.precision_initial, requires_grad=False)
         self.reset_parameters()
 
@@ -111,8 +111,8 @@ class VanillaRFFLayer(Module):
             self.fitted = False
         else:
             if not self.fitted:
-                self.covariance[...] = (self.ridge_penalty *
-                        self.precision.cholesky_inverse())
+                self.covariance[...] = torch.linalg.pinv(self.ridge_penalty *
+                        torch.eye(self.precision.size()[0]) + self.precision)
             self.fitted = True
 
 
@@ -129,8 +129,17 @@ class VanillaRFFLayer(Module):
             self.output_weights[:] = torch.randn(generator = rgen,
                     size = self.output_weights.size())
             self.precision[...] = self.precision_initial.detach()
+            self.precision[:] = 0.
 
 
+    def reset_covariance(self) -> None:
+        """Resets the covariance to the initial values. Useful if
+        planning to generate the precision & covariance matrices
+        on the final epoch."""
+        with torch.no_grad():
+            self.precision[...] = self.precision_initial.detach()
+            self.precision[:] = 0.
+            self.covariance[:] = (1 / self.ridge_penalty) * torch.eye(self.RFFs)
 
     def forward(self, input_tensor: Tensor, update_precision: bool = False,
             get_var: bool = False) -> Tensor:
@@ -170,7 +179,8 @@ class VanillaRFFLayer(Module):
                         "the covariance matrix before requesting a "
                         "variance calculation.")
             with torch.no_grad():
-                var = rff_mat @ (self.covariance @ rff_mat.T)
+                var = self.ridge_penalty * (self.covariance @ rff_mat.T).T
+                var = torch.sum(rff_mat * var, dim=1)
             return logits, var
         return logits
 
