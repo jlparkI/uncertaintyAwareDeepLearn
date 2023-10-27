@@ -91,12 +91,10 @@ class VanillaRFFLayer(Module):
         self.num_freqs = int(0.5 * RFFs)
         self.feature_scale = math.sqrt(2. / float(self.num_freqs))
 
-        self.register_buffer("weight_mat", torch.empty((in_features, self.num_freqs), **factory_kwargs))
+        self.register_buffer("weight_mat", torch.zeros((in_features, self.num_freqs), **factory_kwargs))
         self.output_weights = Parameter(torch.empty((RFFs, out_targets), **factory_kwargs))
-        self.covariance = Parameter((1 / self.ridge_penalty) * torch.eye(RFFs),
-                requires_grad=False)
-        self.precision_initial = torch.zeros((RFFs, RFFs), requires_grad=False)
-        self.precision = Parameter(self.precision_initial, requires_grad=False)
+        self.register_buffer("covariance", torch.zeros((RFFs, RFFs), **factory_kwargs))
+        self.register_buffer("precision", torch.zeros((RFFs, RFFs), **factory_kwargs))
         self.reset_parameters()
 
 
@@ -122,6 +120,7 @@ class VanillaRFFLayer(Module):
         normal -- in fact, that would set the variance on our sqexp kernel
         to something other than 1 (which is ok, but might be unexpected for
         the user)."""
+        self.fitted = False
         with torch.no_grad():
             rgen = torch.Generator()
             rgen.manual_seed(self.random_seed)
@@ -129,7 +128,7 @@ class VanillaRFFLayer(Module):
                     size = self.weight_mat.size())
             self.output_weights[:] = torch.randn(generator = rgen,
                     size = self.output_weights.size())
-            self.precision[...] = self.precision_initial.detach()
+            self.covariance[:] = (1 / self.ridge_penalty) * torch.eye(self.RFFs)
             self.precision[:] = 0.
 
 
@@ -137,8 +136,8 @@ class VanillaRFFLayer(Module):
         """Resets the covariance to the initial values. Useful if
         planning to generate the precision & covariance matrices
         on the final epoch."""
+        self.fitted = False
         with torch.no_grad():
-            self.precision[...] = self.precision_initial.detach()
             self.precision[:] = 0.
             self.covariance[:] = (1 / self.ridge_penalty) * torch.eye(self.RFFs)
 
@@ -172,6 +171,7 @@ class VanillaRFFLayer(Module):
         logits = rff_mat @ self.output_weights
 
         if update_precision:
+            self.fitted = False
             self._update_precision(rff_mat, logits)
 
         if get_var:
