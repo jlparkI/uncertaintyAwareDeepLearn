@@ -38,6 +38,10 @@ class VanillaRFFLayer(Module):
         likelihood (str): One of "gaussian", "binary_logistic", "multiclass".
             Determines how the precision matrix is calculated. Use "gaussian"
             for regression.
+        amplitude (float): The kernel amplitude. This is the inverse of
+            the lengthscale. Performance is not generally
+            very sensitive to the selected value for this hyperparameter,
+            although it may affect calibration. Defaults to 1.
         random_seed: The random seed for generating the random features weight
             matrix. IMPORTANT -- always set this for reproducibility. Defaults to
             123.
@@ -59,8 +63,8 @@ class VanillaRFFLayer(Module):
 
     def __init__(self, in_features: int, RFFs: int, out_targets: int=1,
             gp_cov_momentum = 0.999, gp_ridge_penalty = 1e-3,
-            likelihood = "gaussian", random_seed: int=123,
-            device=None, dtype=None) -> None:
+            likelihood = "gaussian", amplitude = 1.,
+            random_seed: int=123, device=None, dtype=None) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
 
@@ -87,6 +91,7 @@ class VanillaRFFLayer(Module):
         self.ridge_penalty = gp_ridge_penalty
         self.RFFs = RFFs
         self.likelihood = likelihood
+        self.amplitude = amplitude
         self.random_seed = random_seed
         self.num_freqs = int(0.5 * RFFs)
         self.feature_scale = math.sqrt(2. / float(self.num_freqs))
@@ -166,7 +171,7 @@ class VanillaRFFLayer(Module):
         if len(input_tensor.size()) != 2:
             raise ValueError("Only 2d input tensors are accepted by "
                     "VanillaRFFLayer.")
-        rff_mat = input_tensor @ self.weight_mat
+        rff_mat = self.amplitude * input_tensor @ self.weight_mat
         rff_mat = self.feature_scale * torch.cat([torch.cos(rff_mat), torch.sin(rff_mat)], dim=1)
         logits = rff_mat @ self.output_weights
 
