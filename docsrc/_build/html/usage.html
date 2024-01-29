@@ -100,8 +100,8 @@ add it to a PyTorch model you are constructing as shown below::</p>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">my_last_layer</span> <span class="o">=</span> <span class="n">VanillaRFFLayer</span><span class="p">(</span><span class="n">in_features</span> <span class="o">=</span> <span class="mi">212</span><span class="p">,</span> <span class="n">RFFs</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">,</span>
                         <span class="n">out_targets</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">gp_cov_momentum</span> <span class="o">=</span> <span class="mf">0.999</span><span class="p">,</span>
-                        <span class="n">gp_ridge_penalty</span> <span class="o">=</span> <span class="mf">1e-3</span><span class="p">,</span> <span class="n">likelihood</span> <span class="o">=</span> <span class="s2">&quot;gaussian&quot;</span><span class="p">,</span>
-                        <span class="n">random_seed</span> <span class="o">=</span> <span class="mi">123</span><span class="p">)</span>
+                        <span class="n">gp_ridge_penalty</span> <span class="o">=</span> <span class="mf">1e-3</span><span class="p">,</span> <span class="n">amplitude</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">,</span>
+                        <span class="n">likelihood</span> <span class="o">=</span> <span class="s2">&quot;gaussian&quot;</span><span class="p">,</span> <span class="n">random_seed</span> <span class="o">=</span> <span class="mi">123</span><span class="p">)</span>
         <span class="c1"># Insert other layers here</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">update_precision</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">get_var</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>

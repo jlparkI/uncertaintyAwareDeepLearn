@@ -15,8 +15,8 @@ add it to a PyTorch model you are constructing as shown below:::
         
           self.my_last_layer = VanillaRFFLayer(in_features = 212, RFFs = 1024,
                           out_targets = 1, gp_cov_momentum = 0.999,
-                          gp_ridge_penalty = 1e-3, likelihood = "gaussian",
-                          random_seed = 123)
+                          gp_ridge_penalty = 1e-3, amplitude = 1.,
+                          likelihood = "gaussian", random_seed = 123)
           # Insert other layers here
 
       def forward(self, x, update_precision = False, get_var = False):
