@@ -1,5 +1,12 @@
 # uncertaintyAwareDeepLearn
 
+*IMPORTANT NOTE* This project is deprecated as of 11/2024 and is being
+merged with [resp_protein_toolkit](https://github.com/jlparkI/resp_protein_toolkit).
+All of the functionality available in this repo is now available in
+`resp_protein_toolkit` which can be easily installed using pip and contains
+significant additional functionality not available in this project. We recommend
+using `resp_protein_toolkit` in future.
+
 A PyTorch class that implements an approximate Gaussian process as the last
 layer of a neural network - compatible with any architecture and with regression,
 binary logistic classification and classification. This provides a simple way to
