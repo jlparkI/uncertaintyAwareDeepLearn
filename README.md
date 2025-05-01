@@ -1,7 +1,7 @@
 # uncertaintyAwareDeepLearn
 
 *IMPORTANT NOTE* This project is deprecated as of 11/2024 and is being
-merged with [resp_protein_toolkit](https://github.com/Wang-lab-UCSD/RESP2).
+merged with [resp_protein_toolkit](https://github.com/jlparkI/resp_protein_toolkit).
 All of the functionality available in this repo is now available in
 `resp_protein_toolkit` which can be easily installed using pip and contains
 significant additional functionality not available in this project. We recommend
